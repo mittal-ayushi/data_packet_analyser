@@ -1,7 +1,9 @@
+#TOTAL MOST COMMON WORDS
+ 
 import json
 import re
 from collections import Counter
-
+ 
 with open("message_1.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
