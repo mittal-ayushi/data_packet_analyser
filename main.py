@@ -1,77 +1,33 @@
-import json
-import pandas as pd
-from collections import Counter
-import re
-import glob
+from flask import Flask, render_template, request, redirect, url_for
+import os
+from analysis import generate_report
 
-# --- step 1: load and merge all JSON files ---
-all_messages = []
+app = Flask(__name__)
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-for filename in glob.glob("message_*.json"):
-    with open(filename, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        for msg in data["messages"]:
-            if "content" in msg:
-                try:
-                    msg["content"] = msg["content"].encode("latin1").decode("utf-8")
-                except Exception:
-                    pass
-        all_messages.extend(data["messages"])
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-# --- step 2: make DataFrame ---
-df = pd.DataFrame(all_messages)
-df["content"] = df["content"].fillna("")
+@app.route("/upload", methods=["POST"])
+def upload_files():
+    files = request.files.getlist("files")
 
-# --- step 3: word & message counts ---
-df["word_count"] = df["content"].str.split().str.len()
-word_counts = df.groupby("sender_name")["word_count"].sum()
-msg_counts = df["sender_name"].value_counts()
+    for i, file in enumerate(files, start=1):
+        if file.filename:
+            filename = f"message_{i}{os.path.splitext(file.filename)[1]}"
+            path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(path)
 
-# --- step 4: top words ---
-def get_top_words(messages, n=10):
-    words = " ".join(messages).lower()
-    words = re.findall(r"\b\w+\b", words)
-    return Counter(words).most_common(n)
+    # redirect to /analysis after upload
+    return redirect(url_for("analysis"))
 
-# --- step 5: top emojis ---
-emoji_pattern = re.compile(
-    r"[\U0001F600-\U0001F64F"
-    r"\U0001F300-\U0001F5FF"
-    r"\U0001F680-\U0001F6FF"
-    r"\U0001F700-\U0001F77F"
-    r"\U0001F780-\U0001F7FF"
-    r"\U0001F800-\U0001F8FF"
-    r"\U0001F900-\U0001F9FF"
-    r"\U0001FA00-\U0001FA6F"
-    r"\U0001FA70-\U0001FAFF"
-    r"\U0001FAF0-\U0001FAFF"
-    r"\U00002700-\U000027BF]"
-)
+@app.route("/analysis")
+def analysis():
+    # generate the updated report dynamically
+    html_output = generate_report("uploads")
+    return html_output  # render the report
 
-skin_tones = {"🏻", "🏼", "🏽", "🏾", "🏿"}
-
-def get_top_emojis(messages, n=10):
-    all_text = " ".join(messages)
-    emojis = emoji_pattern.findall(all_text)
-    emojis = [e for e in emojis if e not in skin_tones]
-    return Counter(emojis).most_common(n)
-
-# --- step 6: fast reels detection ---
-df["is_reel"] = df["share"].astype(str).str.contains("instagram.com/reel", na=False)
-reel_counts = df.groupby("sender_name")["is_reel"].sum()
-
-# --- step 7: compute top words & emojis per person ---
-top_words = {}
-top_emojis = {}
-
-for person, group in df.groupby("sender_name"):
-    msgs = group["content"].tolist()
-    top_words[person] = get_top_words(msgs, 10)
-    top_emojis[person] = get_top_emojis(msgs, 10)
-
-# --- output ---
-print("📌 Message counts:\n", msg_counts, "\n")
-print("📌 Word counts:\n", word_counts, "\n")
-print("📌 Top words:\n", top_words, "\n")
-print("📌 Top emojis:\n", top_emojis)
-print("📌 Reels sent:\n", reel_counts, "\n")
+if __name__ == "__main__":
+    app.run(debug=True)

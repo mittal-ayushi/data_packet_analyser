@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Analysis Report</title>
+</head>
+<body>
+  <h1>Message Analysis Report</h1>
+
+  <h2>Message Counts</h2>
+  <ul>
+    {% for person, count in message_counts.items() %}
+      <li>{{ person }}: {{ count }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Word Counts</h2>
+  <ul>
+    {% for person, count in word_counts.items() %}
+      <li>{{ person }}: {{ count }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Reels Sent</h2>
+  <ul>
+    {% for person, count in reel_counts.items() %}
+      <li>{{ person }}: {{ count }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Top Words</h2>
+  {% for person, words in top_words.items() %}
+    <h3>{{ person }}</h3>
+    <ul>
+      {% for word, freq in words %}
+        <li>{{ word }}: {{ freq }}</li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+
+  <h2>Top Emojis</h2>
+  {% for person, emojis in top_emojis.items() %}
+    <h3>{{ person }}</h3>
+    <ul>
+      {% for emoji, freq in emojis %}
+        <li>{{ emoji }}: {{ freq }}</li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+</body>
+</html>
